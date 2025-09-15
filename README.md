@@ -2,6 +2,8 @@
 
 https://www.awb.dev/demos/n-queens/
 
+Run a local copy with: `go run .`
+
 ## Refrences:
 Completed as practice for CS4100 (Artificial Intelligence) at Northeastern University.
 
