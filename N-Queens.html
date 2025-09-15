@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Template</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        #canvas {
+            border: 2px solid #333;
+            background-color: white;
+            width: 100%;
+            aspect-ratio: 1;
+            max-height: calc(100vh - 140px); /* Reserve space for controls and margins */
+            max-width: calc(100vh - 140px);
+            margin: 0 auto;
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #runBtn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #runBtn:hover {
+            background-color: #45a049;
+        }
+
+        #stepBtn {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        #stepBtn:hover {
+            background-color: #1976D2;
+        }
+
+        #resetBtn {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        #resetBtn:hover {
+            background-color: #f57c00;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-container label {
+            font-weight: bold;
+            min-width: 50px;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+            color: #666;
+        }
+
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .score-display label {
+            font-weight: bold;
+        }
+
+        #scoreValue {
+            font-weight: bold;
+            color: #2196F3;
+            font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                justify-content: center;
+            }
+            
+            .slider-container {
+                flex-direction: column;
+                align-items: center;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div class="controls">
+        <button id="runBtn">Run</button>
+        <button id="stepBtn">Step</button>
+        <button id="resetBtn">Reset</button>
+        
+        <div class="slider-container">
+            <label for="speedSlider">Speed:</label>
+            <input type="range" id="speedSlider" min="1" max="100" value="1">
+            <span class="slider-value" id="speedValue">1</span>
+        </div>
+        
+        <div class="slider-container">
+            <label for="nSlider">N:</label>
+            <input type="range" id="nSlider" min="1" max="200" value="8">
+            <span class="slider-value" id="nValue">8</span>
+        </div>
+
+        <div class="score-display">
+            <label>Score:</label>
+            <span id="scoreValue">0</span>
+        </div>
+    </div>
+
+    <script src="N-Queens.js"></script>
+    <script>
+        // Get canvas and context
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size to fill available space
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+
+        // Initial canvas setup
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Get controls
+        const runBtn = document.getElementById('runBtn');
+        const stepBtn = document.getElementById('stepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const nSlider = document.getElementById('nSlider');
+        const speedValue = document.getElementById('speedValue');
+        const nValue = document.getElementById('nValue');
+        const scoreValue = document.getElementById('scoreValue');
+
+        // Update slider value displays
+        speedSlider.addEventListener('input', function() {
+            speedValue.textContent = this.value;
+        });
+
+        nSlider.addEventListener('input', function() {
+            nValue.textContent = this.value;
+            board = [];
+            init(parseInt(this.value));
+            drawGrid();
+            renderQueens();
+            scoreValue.textContent = evaluate();
+        });
+
+        // Initialize the board when page loads
+        init(parseInt(nSlider.value));
+
+        // Function to render queens on the board
+        function renderQueens() {
+            const n = parseInt(nSlider.value);
+            const boardSize = Math.min(canvas.width, canvas.height);
+            const squareSize = boardSize / n;
+            const offsetX = (canvas.width - boardSize) / 2;
+            const offsetY = (canvas.height - boardSize) / 2;
+
+            // Draw queens based on board array
+            for (let col = 0; col < board.length; col++) {
+                const row = board[col];
+                const x = offsetX + col * squareSize + squareSize / 2;
+                const y = offsetY + row * squareSize + squareSize / 2;
+
+                drawQueen(x, y, squareSize * 0.8);
+            }
+        }
+
+        // Load and cache the queen SVG
+        let queenImage = null;
+        const img = new Image();
+        img.onload = function() {
+            queenImage = this;
+            // Redraw the board with queens once the image is loaded
+            drawGrid();
+            renderQueens();
+            scoreValue.textContent = evaluate();
+        };
+        img.src = 'queen.svg';
+
+        // Function to draw a queen SVG at specified position
+        function drawQueen(x, y, size) {
+            if (queenImage) {
+                ctx.save();
+                ctx.translate(x - size/2, y - size/2);
+                ctx.drawImage(queenImage, 0, 0, size, size);
+                ctx.restore();
+            }
+        }
+
+        // Button event listeners
+        let isRunning = false;
+
+        runBtn.addEventListener('click', async function() {
+            if (isRunning) {
+                isRunning = false;
+                runBtn.textContent = 'Run';
+                return;
+            }
+
+            console.log('Run button clicked');
+            isRunning = true;
+            runBtn.textContent = 'Stop';
+
+            while(parseInt(scoreValue.textContent) != 0 && isRunning) {
+                const newScore = solve(parseInt(speedSlider.value));
+                scoreValue.textContent = newScore;
+                drawGrid();
+                renderQueens();
+
+                // Constant delay between renders
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            isRunning = false;
+            runBtn.textContent = 'Run';
+        });
+
+        stepBtn.addEventListener('click', function() {
+            console.log('Step button clicked');
+            solve(parseInt(speedSlider.value));
+            drawGrid();
+            renderQueens();
+            scoreValue.textContent = evaluate();
+        });
+
+        resetBtn.addEventListener('click', function() {
+            console.log('Reset button clicked');
+            board = [];
+            init(parseInt(nSlider.value));
+            drawGrid();
+            renderQueens();
+            scoreValue.textContent = evaluate();
+        });
+
+        // Draw chess board based on N slider value
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const n = parseInt(nSlider.value);
+            const boardSize = Math.min(canvas.width, canvas.height);
+            const squareSize = boardSize / n;
+
+            // Center the board on the canvas
+            const offsetX = (canvas.width - boardSize) / 2;
+            const offsetY = (canvas.height - boardSize) / 2;
+
+            // Draw the chess board squares
+            for (let row = 0; row < n; row++) {
+                for (let col = 0; col < n; col++) {
+                    const x = offsetX + col * squareSize;
+                    const y = offsetY + row * squareSize;
+
+                    // Alternate colors for chess board pattern
+                    if ((row + col) % 2 === 0) {
+                        ctx.fillStyle = '#f0d9b5'; // Light squares
+                    } else {
+                        ctx.fillStyle = '#b58863'; // Dark squares
+                    }
+
+                    ctx.fillRect(x, y, squareSize, squareSize);
+                }
+            }
+
+            // Draw border around the board
+            ctx.strokeStyle = '#8b4513';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(offsetX, offsetY, boardSize, boardSize);
+        }
+
+        // Initial grid draw and queen rendering
+        drawGrid();
+        renderQueens();
+        scoreValue.textContent = evaluate();
+    </script>
+</body>
+</html>
